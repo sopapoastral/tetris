@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define REFRESH_RATE 1
 #define D_NUEVO(x, y, d)                                                      \
     ((d) < 0 ? (d) + (2 * (x)) + 3 : (d) + (2 * (x)) - (2 * (y)) + 5)
 
@@ -17,7 +18,7 @@ SDL_Renderer *renderer;
 int           init (void);
 void          kill (void);
 int           loop (void);
-SDL_Point    *circle (int, int, int);
+SDL_Point    *circle (int, int, int, int *);
 
 int
 main (int argc, char *argv[])
@@ -27,7 +28,7 @@ main (int argc, char *argv[])
 
     while (loop ())
     {
-        SDL_Delay (10);
+        SDL_Delay (REFRESH_RATE);
     }
 
     kill ();
@@ -104,19 +105,7 @@ loop (void)
     SDL_SetRenderDrawColor (renderer, 71, 237, 148, 255);
 
     keys = SDL_GetKeyboardState (NULL);
-    if (keys[SDL_SCANCODE_1])
-    {
-        SDL_RenderDrawPoint (renderer, 10, 10);
-    }
-    else if (keys[SDL_SCANCODE_2])
-    {
-        SDL_RenderDrawLine (renderer, 10, 20, 10, 100);
-    }
-    else if (keys[SDL_SCANCODE_3])
-    {
-        SDL_RenderDrawLine (renderer, 10, 20, 10, 100);
-    }
-    else if (keys[SDL_SCANCODE_R])
+    if (keys[SDL_SCANCODE_R])
     {
         SDL_SetRenderDrawColor (renderer, 255, 90, 120, 255);
         SDL_RenderClear (renderer);
@@ -129,8 +118,11 @@ loop (void)
 
     if (mx0 != -1)
     {
-        SDL_Point *points = circle (mx0, my0, 100);
-        SDL_RenderDrawPoints (renderer, points, 20000);
+        int        cant   = 0;
+        int x = ( mx1 != 0 ) ? mx1 : mx0;
+        int y = ( my1 != 0 ) ? my1 : my0;
+        SDL_Point *points = circle (x, y, 30, &cant);
+        SDL_RenderDrawPoints (renderer, points, cant);
         free (points);
     }
 
@@ -148,97 +140,56 @@ kill (void)
 }
 
 SDL_Point *
-circle (int x, int y, int R)
+circle (int x, int y, int R, int *cant)
 {
-    int count = (2 * R) * (2 * R);
-    SDL_Point *points
-        = (SDL_Point *)malloc (sizeof (SDL_Point) * count);
-    SDL_Point origin;
-    origin.x = origin.y = 0;
+    int        count  = round (2 * M_PI * R) + 1;
+    SDL_Point *points = (SDL_Point *)malloc (sizeof (SDL_Point) * count);
 
     for (int i = 0; i < count; ++i)
     {
-        *(points + i) = origin;
+        points[i].x = 0;
+        points[i].x = R;
     }
 
-    int k = 0;
+    SDL_Point p        = { 0, R };
+    SDL_Point anterior = p;
+    int       d        = 0;
+    int       k        = 0;
 
-    fprintf (stderr, "Antes del circulo\n");
-
-    // Return points of all concentric circles.
-    for (int i = 1; i <= R; ++i)
+    SDL_Point symmetry[8]
+        = { { p.x, p.y }, { p.y, p.x }, { p.x, -p.y }, { -p.y, p.x } };
+    for (int i = 0; i < 4; ++i)
     {
-        // Initial point
-        SDL_Point p0;
-        p0.x               = 0;
-        p0.y               = i;
-        points[k++]        = p0;
-
-        int       d        = 0;
-        SDL_Point anterior = p0;
-
-        for (int j = 0; j < i / M_SQRT2; ++j)
-        {
-            SDL_Point actual;
-            d = D_NUEVO (anterior.x, anterior.y, d - 0.25);
-            printf("Valor de d = %d\n", d);
-            if (d < 0)
-            {
-                actual.x = anterior.x + 1;
-                actual.y = anterior.y;
-            }
-            else // d >= 0
-            {
-                actual.x = anterior.x + 1;
-                actual.y = anterior.y - 1;
-            }
-
-            points[k++] = actual;
-
-            SDL_Point p1;
-            p1.x        = actual.y;
-            p1.y        = actual.x;
-            points[k++] = p1;
-
-            SDL_Point p2;
-            p2.x        = actual.y;
-            p2.y        = -actual.x;
-            points[k++] = p2;
-
-            SDL_Point p3;
-            p3.x        = actual.x;
-            p3.y        = -actual.y;
-            points[k++] = p3;
-
-            SDL_Point p4;
-            p4.x        = -actual.x;
-            p4.y        = -actual.y;
-            points[k++] = p4;
-
-            SDL_Point p5;
-            p5.x        = -actual.y;
-            p5.y        = -actual.x;
-            points[k++] = p5;
-
-            SDL_Point p6;
-            p6.x        = -actual.y;
-            p6.y        = actual.x;
-            points[k++] = p6;
-
-            SDL_Point p7;
-            p7.x        = -actual.x;
-            p7.y        = actual.y;
-            points[k++] = p7;
-
-            anterior    = actual;
-        }
+        points[k++] = symmetry[i];
     }
 
+    for (int j = 0; j < R / M_SQRT2; ++j)
+    {
+        // Tomar h = d - 1/4 asegura aritmetica entera;
+        d   = D_NUEVO (anterior.x, anterior.y, d - 0.25);
+        p.x = anterior.x + 1;
+        p.y = (d < 0) ? anterior.y : anterior.y - 1;
+
+        SDL_Point symmetry[8]
+            = { { p.x, p.y },   { p.y, p.x },   { p.x, -p.y }, { -p.y, p.x },
+                { -p.x, -p.y }, { -p.y, -p.x }, { -p.x, p.y }, { p.y, -p.x } };
+        for (int i = 0; i < 8; ++i)
+            points[k++] = symmetry[i];
+
+        anterior = p;
+    }
+
+    // Trasladar por el vector centro
     for (int i = 0; i < count; ++i)
     {
         points[i].x += x;
         points[i].y += y;
     }
 
+    *cant = k;
     return points;
 }
+
+// SDL_Point *
+// fill_poly (SDL_Point *poly)
+// {}
