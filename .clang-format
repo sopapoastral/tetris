@@ -22,6 +22,9 @@ AlignConsecutiveShortCaseStatements:
   AcrossComments: true
   AlignCaseColons: true
 
+IndentCaseBlocks: true
+IndentCaseLabels: true
+
 # Configure each individual brace in BraceWrapping
 BreakBeforeBraces: Custom
 # Control of individual brace wrapping cases

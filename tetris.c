@@ -16,13 +16,14 @@
 
 SDL_Window   *win;
 SDL_Renderer *renderer;
-SDL_Texture *texture;
+SDL_Texture  *texture;
 
 int           init (void);
 void          kill (void);
 int           loop (void);
 SDL_Point    *circle (int, int, int, int *);
 SDL_Point    *brush (int, int, int, int *);
+void          spawn_block (void);
 SDL_Point *(*shape) (int, int, int, int *);
 
 int
@@ -92,19 +93,25 @@ loop (void)
     {
         switch (e.type)
         {
-        case SDL_QUIT:
-            return 0;
-        case SDL_MOUSEBUTTONDOWN:
-            mx0 = e.button.x;
-            my0 = e.button.y;
-            break;
-        case SDL_MOUSEMOTION:
-            mx1 = e.button.x;
-            my1 = e.button.y;
-            break;
-        case SDL_MOUSEBUTTONUP:
-            mx0 = my0 = mx1 = my1 = -1;
-            break;
+            case SDL_QUIT:
+                return 0;
+            case SDL_MOUSEBUTTONDOWN:
+                {
+                    mx0 = e.button.x;
+                    my0 = e.button.y;
+                }
+                break;
+            case SDL_MOUSEMOTION:
+                {
+                    mx1 = e.button.x;
+                    my1 = e.button.y;
+                }
+                break;
+            case SDL_MOUSEBUTTONUP:
+                {
+                    mx0 = my0 = mx1 = my1 = -1;
+                }
+                break;
         }
     }
 
@@ -120,6 +127,10 @@ loop (void)
     {
         return 0;
     }
+    else if (keys[SDL_SCANCODE_T])
+    {
+        spawn_block ();
+    }
     else if (keys[SDL_SCANCODE_F4]
              && (keys[SDL_SCANCODE_LALT] || keys[SDL_SCANCODE_RALT]))
     {
@@ -130,20 +141,24 @@ loop (void)
         shape = (shape == circle) ? brush : circle;
     }
 
-        if (mx0 != -1)
-        {
-            int        cant   = 0;
-            int        x      = (mx1 != 0) ? mx1 : mx0;
-            int        y      = (my1 != 0) ? my1 : my0;
-            SDL_Point *points = shape (x, y, 30, &cant);
-            SDL_RenderDrawPoints (renderer, points, cant);
-            free (points);
-        }
+    if (mx0 != -1)
+    {
+        int        cant   = 0;
+        int        x      = (mx1 != 0) ? mx1 : mx0;
+        int        y      = (my1 != 0) ? my1 : my0;
+        SDL_Point *points = shape (x, y, 30, &cant);
+        SDL_RenderDrawPoints (renderer, points, cant);
+        free (points);
+    }
 
     SDL_RenderPresent (renderer);
 
     return 1;
 }
+
+void
+spawn_block (void)
+{}
 
 void
 kill (void)
